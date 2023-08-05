@@ -7,10 +7,14 @@ from sc2.ids.unit_typeid import UnitTypeId
 from sc2.main import run_game
 from sc2.player import Bot, Computer
 
+from map import update_map
+
 
 class ThreebaseVoidrayBot(BotAI):
     
     async def on_step(self, iteration):
+        update_map(self)
+
         target_base_count = 3
         target_stargate_count = 3
 
