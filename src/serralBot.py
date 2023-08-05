@@ -9,8 +9,7 @@ from sc2.player import Bot, Computer
 
 
 class ThreebaseVoidrayBot(BotAI):
-
-    # pylint: disable=R0912
+    
     async def on_step(self, iteration):
         target_base_count = 3
         target_stargate_count = 3
@@ -42,7 +41,8 @@ class ThreebaseVoidrayBot(BotAI):
                 if vr.weapon_cooldown > 0:
                     vr(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
                 # Choose target and attack, filter out invisible targets
-                targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                targets = (self.enemy_units | self.enemy_structures).filter(
+                    lambda unit: unit.can_be_attacked)
                 if targets:
                     target = targets.closest_to(vr)
                     vr.attack(target)
@@ -54,7 +54,8 @@ class ThreebaseVoidrayBot(BotAI):
 
         # If we are low on supply, build pylon
         if (
-            self.supply_left < 2 and self.already_pending(UnitTypeId.PYLON) == 0
+            self.supply_left < 2 and self.already_pending(
+                UnitTypeId.PYLON) == 0
             or self.supply_used > 15 and self.supply_left < 4 and self.already_pending(UnitTypeId.PYLON) < 2
         ):
             # Always check if you can afford something before you build it
@@ -104,11 +105,12 @@ class ThreebaseVoidrayBot(BotAI):
                         worker.build_gas(vg)
                         worker.stop(queue=True)
 
-        # If we have less than 3  but at least 3 nexuses, build stargate
+        # If we have less than 3 stargates and at least 3 nexuses, build stargate
         if self.structures(UnitTypeId.PYLON).ready and self.structures(UnitTypeId.CYBERNETICSCORE).ready:
             pylon = self.structures(UnitTypeId.PYLON).ready.random
             if (
-                self.townhalls.ready.amount + self.already_pending(UnitTypeId.NEXUS) >= target_base_count
+                self.townhalls.ready.amount +
+                    self.already_pending(UnitTypeId.NEXUS) >= target_base_count
                 and self.structures(UnitTypeId.STARGATE).ready.amount + self.already_pending(UnitTypeId.STARGATE) <
                 target_stargate_count
             ):
