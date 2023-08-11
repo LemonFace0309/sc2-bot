@@ -1,2 +1,6 @@
 .venv
 __pycache__/
+logs
+models
+src/state_rwd_action.pkl
+src/results.txt
