@@ -28,8 +28,17 @@ class SerralBot(BotAI):
                         action = state_rwd_action['action']
             except:
                 pass
-        
+
+        if iteration == 0:
+            await self.chat_send("(glhf)")
+
         await self.distribute_workers() # put idle workers back to work
+        
+        if not self.townhalls.ready:
+            # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
+            for worker in self.workers:
+                worker.attack(self.enemy_start_locations[0])
+            return
 
         '''
         0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
@@ -42,64 +51,64 @@ class SerralBot(BotAI):
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         if action == 0:
             try:
-                found_something = False
+                nexus = self.townhalls.ready.random
+
                 if self.supply_left < 4:
                     # build pylons. 
                     if self.already_pending(UnitTypeId.PYLON) == 0:
                         if self.can_afford(UnitTypeId.PYLON):
-                            await self.build(UnitTypeId.PYLON, near=random.choice(self.townhalls))
-                            found_something = True
+                            await self.build(UnitTypeId.PYLON, near=nexus)
 
-                if not found_something:
-                    for nexus in self.townhalls:
-                        # get worker count for this nexus:
-                        worker_count = len(self.workers.closer_than(10, nexus))
-                        if worker_count < 22: # 16+3+3
-                            if nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
-                                nexus.train(UnitTypeId.PROBE)
-                                found_something = True
+                # build probes until we have 22 total:
+                worker_count = len(self.workers.closer_than(10, nexus))
+                if worker_count < 22: # 16+3+3
+                    if nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
+                        nexus.train(UnitTypeId.PROBE)
 
-                        # have we built enough assimilators?
-                        # find vespene geysers
-                        for geyser in self.vespene_geyser.closer_than(10, nexus):
-                            # build assimilator if there isn't one already:
-                            if not self.can_afford(UnitTypeId.ASSIMILATOR):
-                                break
-                            if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(2.0, geyser).exists:
-                                await self.build(UnitTypeId.ASSIMILATOR, geyser)
-                                found_something = True
+                # build assimilators:
+                for vg in self.vespene_geyser.closer_than(15, nexus):
+                    # build assimilator if there isn't one already:
+                    if not self.can_afford(UnitTypeId.ASSIMILATOR):
+                        break
+                    worker = self.select_build_worker(vg.position)
+                    if worker is None:
+                        break
 
-                    if self.already_pending(UnitTypeId.NEXUS) == 0 and self.can_afford(UnitTypeId.NEXUS):
-                        await self.expand_now()
+                    if not self.gas_buildings or not self.gas_buildings.closer_than(2, vg).exists:
+                        worker.build_gas(vg)
+                        worker.stop(queue=True)
+
+                if self.already_pending(UnitTypeId.NEXUS) == 0 and self.can_afford(UnitTypeId.NEXUS):
+                    await self.expand_now()
             except Exception as e:
                 print(e)
 
 
         #1: build stargate (or up to one) (evenly)
         elif action == 1:
-            try:
-                # iterate thru all nexus and see if these buildings are close
-                for nexus in self.townhalls:
-                    # is there is not a gateway close:
-                    if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
-                            # build gateway
-                            await self.build(UnitTypeId.GATEWAY, near=nexus)
-                        
-                    # if the is not a cybernetics core close:
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
-                            # build cybernetics core
-                            await self.build(UnitTypeId.CYBERNETICSCORE, near=nexus)
+            nexus = self.townhalls.ready.random
 
-                    # if there is not a stargate close:
-                    if not self.structures(UnitTypeId.STARGATE).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.STARGATE) and self.already_pending(UnitTypeId.STARGATE) == 0:
-                            # build stargate
-                            await self.build(UnitTypeId.STARGATE, near=nexus)
+            try:
+                # is there is not a gateway close:
+                if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
+                    # if we can afford it:
+                    if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
+                        # build gateway
+                        await self.build(UnitTypeId.GATEWAY, near=nexus)
+                    
+                # if there is not a cybernetics core close:
+                if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
+                    # if we can afford it:
+                    if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
+                        # build cybernetics core
+                        await self.build(UnitTypeId.CYBERNETICSCORE, near=nexus)
+
+                # if there is not a stargate close:
+                if not self.structures(UnitTypeId.STARGATE).closer_than(10, nexus).exists:
+                    # if we can afford it:
+                    if self.can_afford(UnitTypeId.STARGATE) and self.already_pending(UnitTypeId.STARGATE) == 0:
+                        # build stargate
+                        await self.build(UnitTypeId.STARGATE, near=nexus)
             except Exception as e:
                 print(e)
 
@@ -116,20 +125,19 @@ class SerralBot(BotAI):
 
         #3: send scout
         elif action == 3:
-            # are there any idle probes:
             try:
                 self.last_sent
             except:
                 self.last_sent = 0
 
-            # if self.last_sent doesnt exist yet:
+            # prevent bot from scouting too often
             if (iteration - self.last_sent) > 200:
                 try:
                     if self.units(UnitTypeId.PROBE).idle.exists:
                         # pick one of these randomly:
-                        probe = random.choice(self.units(UnitTypeId.PROBE).idle)
+                        probe = self.units(UnitTypeId.PROBE).idle.random
                     else:
-                        probe = random.choice(self.units(UnitTypeId.PROBE))
+                        probe = self.units(UnitTypeId.PROBE).random
                     # send probe towards enemy base:
                     probe.attack(self.enemy_start_locations[0])
                     self.last_sent = iteration
@@ -142,27 +150,13 @@ class SerralBot(BotAI):
         elif action == 4:
             try:
                 # take all void rays and attack!
-                for voidray in self.units(UnitTypeId.VOIDRAY).idle:
-                    # if we can attack:
-                    if self.enemy_units.closer_than(10, voidray):
-                        # attack!
-                        voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
-                    # if we can attack:
-                    elif self.enemy_structures.closer_than(10, voidray):
-                        # attack!
-                        voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
-                    # any enemy units:
-                    elif self.enemy_units:
-                        # attack!
-                        voidray.attack(random.choice(self.enemy_units))
-                    # any enemy structures:
-                    elif self.enemy_structures:
-                        # attack!
-                        voidray.attack(random.choice(self.enemy_structures))
-                    # if we can attack:
-                    elif self.enemy_start_locations:
-                        # attack!
-                        voidray.attack(self.enemy_start_locations[0])
+                for vr in self.units(UnitTypeId.VOIDRAY).idle:
+                    targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                    if targets:
+                        target = targets.closest_to(vr)
+                        vr.attack(target)
+                    else:
+                        vr.attack(self.enemy_start_locations[0])
             except Exception as e:
                 print(e)
             

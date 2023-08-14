@@ -2,7 +2,6 @@ from sc2.bot_ai import BotAI  # parent class we inherit from
 from sc2.ids.unit_typeid import UnitTypeId
 import cv2
 import math
-import time
 import numpy as np
 
 MAX_MINERAL_CONTENT = 1800

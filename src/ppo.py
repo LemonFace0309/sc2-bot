@@ -35,7 +35,8 @@ if not os.path.exists(logdir):
 
 env = Sc2Env()
 
-model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
+# change to MlpPolicy if it doesn't work well
+model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=logdir)
 
 TIMESTEPS = 10000
 iters = 0

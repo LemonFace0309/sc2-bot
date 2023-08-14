@@ -16,7 +16,6 @@ class Sc2Env(gym.Env):
 		self.observation_space = spaces.Box(0, 255, shape=(200, 176, 3), dtype=np.uint8)
 
 	def step(self, action):
-		print("STEPPP!!! Action:", action)
 		observation = np.zeros((200, 176, 3), dtype=np.uint8)
 		reward = 0
 		terminated = False
@@ -43,11 +42,11 @@ class Sc2Env(gym.Env):
 						wait_for_action = False
 						observation = state_rwd_action['state']
 						reward = state_rwd_action['reward']
-						print("reward:", reward)
 						terminated = state_rwd_action['terminated']
 			except Exception as e:
 				# occurs because of concurrency issues
-				print("Error while waiting for bot to perform action:", str(e))
+				# print("Error while waiting for bot to perform action:", str(e))
+				pass
 
 		return observation, reward, terminated, truncated, info
 
@@ -62,7 +61,7 @@ class Sc2Env(gym.Env):
 			pickle.dump(data, f)
 
 		# run serralBot.py non-blocking:
-		subprocess.Popen(['python3', 'serralBot.py'])
+		subprocess.Popen(['python3', 'src/serralBot.py'])
 		return observation, info
 	
 	def render(self):
