@@ -5,3 +5,4 @@ models
 state_rwd_action.pkl
 src/state_rwd_action.pkl
 src/results.txt
+.python-version

@@ -2,7 +2,6 @@ import pickle
 import cv2
 import time
 import sys
-import random
 
 import numpy as np
 from sc2 import maps
@@ -146,8 +145,10 @@ class SerralBot(BotAI):
                     pass
 
 
-        #4: attack (known buildings, units, then enemy base, just go in logical order.)
+        #4: attack
         elif action == 4:
+            # todo: add secondary neural network to perform micro actions
+
             try:
                 # take all void rays and attack!
                 for vr in self.units(UnitTypeId.VOIDRAY).idle:
